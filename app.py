@@ -8,8 +8,17 @@ app = Flask(__name__)
 
 # URL del flujo de video HLS
 _URL = 'http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg'
+# IP Address
+#_URL = 'http://10.0.0.3'
+# Default Streaming Port
+_PORT = '81'
+# Default streaming route
+_ST = '/stream'
+SEP = ':'
+
 
 #Variables
+#stream_url = ''.join([_URL,SEP,_PORT,_ST])
 # Constantes
 MAX_FRAMES = 1000
 LEARNING_RATE = -1  # -1 para que el sustractor ajuste automáticamente el fondo
@@ -322,6 +331,76 @@ def edge_detection():
 
     cap4.release()
 
+###PARTE 2 
+###OPEREACIONES MORFOLOGICAS
+
+def operaciones(image):
+    """Aplica operaciones morfológicas a una imagen y las devuelve en una imagen combinada."""
+    
+    kernel = np.ones((37, 37), np.uint8)
+
+    # Operaciones morfológicas
+    erosion = cv2.erode(image, kernel, iterations=1)
+    dilation = cv2.dilate(image, kernel, iterations=1)
+    top_hat = cv2.morphologyEx(image, cv2.MORPH_TOPHAT, kernel)
+    black_hat = cv2.morphologyEx(image, cv2.MORPH_BLACKHAT, kernel)
+    enhanced_image = cv2.add(image, cv2.subtract(top_hat, black_hat))
+
+    # Preparar el contenedor de resultados con 1 fila y 4 columnas
+    height, width = image.shape
+    result_image = np.zeros((height, width * 4), dtype=np.uint8)
+    
+    # Colocar los resultados en una fila con 4 columnas
+    result_image[:height, :width] = erosion
+    result_image[:height, width:2*width] = dilation
+    result_image[:height, 2*width:3*width] = black_hat
+    result_image[:height, 3*width:] = enhanced_image
+
+    # Etiquetas
+    cv2.putText(result_image, "Erosion", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+    cv2.putText(result_image, "Dilation", (width + 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+    cv2.putText(result_image, "black_hat", (2 * width + 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+    cv2.putText(result_image, "Ecualizada", (3 * width + 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+
+    return result_image
+
+
+def image_manipulation():
+    """Procesa tres imágenes, aplica operaciones morfológicas y devuelve una imagen combinada."""
+    # Rutas a las tres imágenes que deseas procesar
+    imagen1_path = "static/radiografia.jpg"
+    imagen2_path = "static/radiografia2.jpg"
+    imagen3_path = "static/radiografia3.jpg"
+    
+    # Cargar las tres imágenes en escala de grises
+    imagen1 = cv2.imread(imagen1_path, 0)
+    imagen2 = cv2.imread(imagen2_path, 0)
+    imagen3 = cv2.imread(imagen3_path, 0)
+    
+     # Verifica si las imágenes se cargaron correctamente
+    if imagen1 is None or imagen2 is None or imagen3 is None:
+        print("Error al cargar una de las imágenes")
+        return None
+
+    # Redimensionar las imágenes a un tamaño común (por ejemplo, el tamaño de la primera imagen)
+    height, width = imagen1.shape
+    imagen2 = cv2.resize(imagen2, (width, height))
+    imagen3 = cv2.resize(imagen3, (width, height))
+
+    # Aplicar las operaciones a cada imagen
+    resultado1 = operaciones(imagen1)
+    resultado2 = operaciones(imagen2)
+    resultado3 = operaciones(imagen3)
+
+    # Apilar verticalmente los resultados
+    combined_result = np.vstack((resultado1, resultado2, resultado3))
+
+    # Codificar la imagen combinada como JPEG
+    (flag, encodedImage) = cv2.imencode(".jpg", combined_result)
+    if not flag:
+        return None
+    return encodedImage
+
 # Llama a la función border_detection para iniciar el procesamiento
     
 @app.route("/")
@@ -346,7 +425,19 @@ def filtros_avanzados():
 @app.route("/deteccion_borde")
 def deteccion_borde():
     return Response(edge_detection(),
-                    mimetype="multipart/x-mixed-replace; boundary=frame")    
+                    mimetype="multipart/x-mixed-replace; boundary=frame")   
+    
+@app.route('/operacionesMorfologicas', methods=['GET'])
+def operacionesMorfologicas():
+    # Llamar a la función image_manipulation
+    processed_frame = image_manipulation()
+    
+    if processed_frame is None:
+        return "Error procesando las imágenes", 500
+    
+    # Devolver la imagen procesada
+    return Response(processed_frame.tobytes(), mimetype='image/jpeg')
+##Paginas 
 @app.route('/division2')
 def division2():
     return render_template("division2.html")
@@ -354,6 +445,10 @@ def division2():
 @app.route('/division3')
 def division3():
     return render_template("division3.html")
+
+@app.route('/procesosMorfologicos')
+def procesosMorfologicos():
+    return render_template("operaciones.html")
 
 if __name__ == "__main__":
     app.run(debug=False)

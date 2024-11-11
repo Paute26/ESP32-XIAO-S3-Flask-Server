@@ -8,7 +8,6 @@
     <title>Videostreaming ESP32-CAM</title>
     <style>
         /* Estilos generales */
-        /* Estilos generales */
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -24,23 +23,16 @@
             padding-top: 20px;
             display: flex;
             flex-direction: column;
-            /* Organiza los elementos en columnas */
             justify-content: flex-start;
-            /* Alinea los botones en la parte superior */
             gap: 10px;
-            /* Añade espacio entre los botones */
             height: 100vh;
-            /* Asegura que la sidebar ocupe toda la altura de la pantalla */
             position: fixed;
-            /* Fija la barra lateral en el lado izquierdo */
         }
 
         /* Estilos para los botones */
         .sidebar .boton {
             display: block;
-            /* Cada botón ocupa una línea */
             width: 100%;
-            /* Los botones ocupan todo el ancho disponible */
             padding: 10px 20px;
             font-size: 16px;
             background-color: #333;
@@ -50,7 +42,6 @@
             text-decoration: none;
             cursor: pointer;
             box-sizing: border-box;
-            /* Incluye el padding en el tamaño total del botón */
         }
 
         .sidebar .boton:hover {
@@ -60,7 +51,6 @@
         /* Estilos para la información del autor */
         .sidebar .author {
             margin-top: auto;
-            /* Empuja esta sección hacia el fondo */
             font-size: 14px;
             padding: 10px;
             color: #aaa;
@@ -70,7 +60,6 @@
         /* Contenido principal */
         .main-content {
             margin-left: 150px;
-            /* Deja espacio para la sidebar */
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -91,10 +80,13 @@
             color: #333;
         }
 
+        /* Ajuste para la imagen de resultados */
         #resultados {
-            max-width: 70%;
-            max-height: 70%;
+            width: 90%; /* Aumenta el tamaño de la imagen */
+            height: auto; /* Mantiene la proporción de la imagen */
+            max-width: 100%; /* Evita que la imagen sea mayor al contenedor */
         }
+
     </style>
 </head>
 
@@ -105,9 +97,7 @@
         <div>
             <a href="https://github.com/Paute26/ESP32-XIAO-S3-Flask-Server" class="boton" target="_blank">GitHub</a>
             <a href="http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg" class="boton" target="_blank">En-Vivo</a>
-            <a href="{{ url_for('division2') }}" class="boton" >Ir a Division2</a>
-            <a href="{{ url_for('division3') }}" class="boton" >Ir a Division3</a>
-            <a href="{{ url_for('procesosMorfologicos') }}" class="boton" >Ir a Division3</a>
+            <a href="{{ url_for('index') }}" class="boton">Inicio</a>
         </div>
         <div class="author">
             <p>by:</p>
@@ -123,14 +113,9 @@
             <h1>Video Streaming</h1>
             <img src="{{ url_for('static', filename='Header.webp') }}" alt="Image header" width="50%">
         </div>
-
-        <h2>ORIGINAL / Escala de Grises / Ruido y Efecto SalyPimienta</h2>
-        <img id="resultados" src="{{ url_for('video_stream') }}">
-        <h2>Ecualización de histograma/CLAHE/gamma correction </h2>
-        <h2> --- </h2>
-
-        <h2>FPS visualizados y Deteccion de Movimiento + Imagen de Fondo Calculada</h2>
-        <img id="resultados" src="{{ url_for('fps_movedeteccion') }}">
+    
+        <h2>Operaciones Morfológicas</h2>
+        <img id="resultados" src="{{ url_for('operacionesMorfologicas') }}">
         <h2> --- </h2>
 
     </div>

@@ -105,8 +105,8 @@
         <div>
             <a href="https://github.com/Paute26/ESP32-XIAO-S3-Flask-Server" class="boton" target="_blank">GitHub</a>
             <a href="http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg" class="boton" target="_blank">En-Vivo</a>
+            <a href="{{ url_for('index') }}" class="boton" >Inico</a>
             <a href="{{ url_for('division2') }}" class="boton" >Ir a Division2</a>
-            <a href="{{ url_for('division3') }}" class="boton" >Ir a Division3</a>
         </div>
         <div class="author">
             <p>by:</p>
@@ -122,14 +122,9 @@
             <h1>Video Streaming</h1>
             <img src="{{ url_for('static', filename='Header.webp') }}" alt="Image header" width="50%">
         </div>
-
-        <h2>ORIGINAL / Escala de Grises / Ruido y Efecto SalyPimienta</h2>
-        <img id="resultados" src="{{ url_for('video_stream') }}">
-        <h2>Ecualización de histograma/CLAHE/gamma correction </h2>
-        <h2> --- </h2>
-
-        <h2>FPS visualizados y Deteccion de Movimiento + Imagen de Fondo Calculada</h2>
-        <img id="resultados" src="{{ url_for('fps_movedeteccion') }}">
+    
+        <h2> Deteccion de Bordes</h2>
+        <img id="resultados" src="{{ url_for('deteccion_borde') }}">
         <h2> --- </h2>
 
     </div>

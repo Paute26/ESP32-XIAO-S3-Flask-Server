@@ -13,6 +13,8 @@ _URL = 'http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg'
 # Constantes
 MAX_FRAMES = 1000
 LEARNING_RATE = -1  # -1 para que el sustractor ajuste automáticamente el fondo
+# Definir los tamaños de las máscaras para los filtros
+FILTER_SIZES = [3, 5, 7]  # Tamaños de máscaras para los filtros
 fgbg = cv2.createBackgroundSubtractorMOG2()
 
 def apply_filters(image):
@@ -149,8 +151,178 @@ def fps_deteccion():
 
     cap2.release()
 
+def filters_avance(frame):
+    """Aplica los filtros mediana, blur y Gaussiano con diferentes tamaños de máscara."""
     
+    # Filtro mediana
+    median_filtered = cv2.medianBlur(frame, FILTER_SIZES[0])  # Tamaño 3
+    # Filtro blur
+    blur_filtered = cv2.blur(frame, (FILTER_SIZES[1], FILTER_SIZES[1]))  # Tamaño 5x5
+    # Filtro Gaussiano
+    gaussian_filtered = cv2.GaussianBlur(frame, (FILTER_SIZES[2], FILTER_SIZES[2]), 0)  # Tamaño 7x7
+
+    return median_filtered, blur_filtered, gaussian_filtered
+
+def add_filters_avance():
+    cap3 = cv2.VideoCapture(_URL)
+    frame_count = 0
+    MAX_FRAMES = 1000  # O cualquier valor que desees
+
+    while frame_count < MAX_FRAMES:
+        ret3, frame3 = cap3.read()
+        if not ret3:
+            break
+        
+        height, width, canales = frame3.shape
+        
+        # Aplicar los filtros
+        median_filtered, blur_filtered, gaussian_filtered = filters_avance(frame3)
+        
+        # Crear un espacio para apilar las imágenes con los filtros
+        bor_image = np.zeros((height * 2, width * 2, 3), dtype=np.uint8)  # Espacio para 4 imágenes (original + 3 filtros)
+
+        # Colocar la imagen original en la primera celda
+        bor_image[:height, :width, :] = frame3
+        
+        # Colocar la imagen con filtro mediana en la segunda celda
+        bor_image[:height, width:2*width, :] = median_filtered
+        
+        # Colocar la imagen con filtro blur en la tercera celda
+        bor_image[height:2*height,:width, :] = blur_filtered
+        
+        # Colocar la imagen con filtro gaussiano en la cuarta celda
+        bor_image[height:2*height, width:2*width, :] = gaussian_filtered
+
+        # Codificar la imagen combinada como JPEG
+        (flag, encodedImage) = cv2.imencode(".jpg", bor_image)
+        if not flag:
+            continue
+
+        # Generar cada fotograma como una respuesta para transmitir en Flask
+        yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+               bytearray(encodedImage) + b'\r\n')
+
+        frame_count += 1
+
+    cap3.release()
+
+
+    """Aplica algoritmos de detección de bordes y compara los resultados con y sin filtros de suavizado."""
     
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gaussian_filtered = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    canny_edges_original = cv2.Canny(gray, 100, 200)
+    canny_edges_filtered = cv2.Canny(gaussian_filtered, 100, 200)
+    
+    sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    sobel_edges_original = np.uint8(np.clip(cv2.magnitude(sobel_x, sobel_y), 0, 255))
+    
+    sobel_x_filtered = cv2.Sobel(gaussian_filtered, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y_filtered = cv2.Sobel(gaussian_filtered, cv2.CV_64F, 0, 1, ksize=3)
+    sobel_edges_filtered = np.uint8(np.clip(cv2.magnitude(sobel_x_filtered, sobel_y_filtered), 0, 255))
+    
+    height, width = gray.shape
+    edge_image = np.zeros((height * 3, width * 3, 3), dtype=np.uint8)
+    
+    edge_image[:height, :width, :] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    gray_bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    edge_image[:height, width:2*width, :] = gray_bgr
+    
+    canny_bgr = cv2.cvtColor(canny_edges_original, cv2.COLOR_GRAY2BGR)
+    edge_image[:height, 2*width:, :] = canny_bgr
+    cv2.putText(edge_image, "Canny (sin filtro)", (2*width+10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    edge_image[height:, :width, :] = cv2.cvtColor(gaussian_filtered, cv2.COLOR_GRAY2BGR)
+    edge_image[height:, width:2*width, :] = cv2.cvtColor(canny_edges_filtered, cv2.COLOR_GRAY2BGR)
+    cv2.putText(edge_image, "Canny (con filtro)", (width+10, height+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    edge_image[height:, 2*width:, :] = cv2.cvtColor(sobel_edges_original, cv2.COLOR_GRAY2BGR)
+    cv2.putText(edge_image, "Sobel (sin filtro)", (2*width+10, height+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    edge_image[2*height:, :width, :] = cv2.cvtColor(sobel_edges_filtered, cv2.COLOR_GRAY2BGR)
+    cv2.putText(total_image, "Sobel (con filtro)", (10, 2*height+30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
+    return total_image
+
+def filtro_deteccion_borde(frame):
+    """Aplica algoritmos de detección de bordes y compara los resultados con y sin filtros de suavizado."""
+
+    height, width, _ = frame.shape
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Suavizado Gaussiano
+    gaussian_filtered = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    # Detección de bordes usando Canny
+    canny_edges_original = cv2.Canny(gray, 100, 200)
+    canny_edges_filtered = cv2.Canny(gaussian_filtered, 100, 200)
+
+    # Detección de bordes usando Sobel
+    sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    sobel_edges_original = np.uint8(np.clip(cv2.magnitude(sobel_x, sobel_y), 0, 255))
+
+    sobel_x_filtered = cv2.Sobel(gaussian_filtered, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y_filtered = cv2.Sobel(gaussian_filtered, cv2.CV_64F, 0, 1, ksize=3)
+    sobel_edges_filtered = np.uint8(np.clip(cv2.magnitude(sobel_x_filtered, sobel_y_filtered), 0, 255))
+
+    # Redimensionar todas las imágenes al tamaño original
+    gaussian_filtered = cv2.resize(cv2.cvtColor(gaussian_filtered, cv2.COLOR_GRAY2BGR), (width, height))
+    canny_edges_original = cv2.resize(cv2.cvtColor(canny_edges_original, cv2.COLOR_GRAY2BGR), (width, height))
+    canny_edges_filtered = cv2.resize(cv2.cvtColor(canny_edges_filtered, cv2.COLOR_GRAY2BGR), (width, height))
+    sobel_edges_original = cv2.resize(cv2.cvtColor(sobel_edges_original, cv2.COLOR_GRAY2BGR), (width, height))
+    sobel_edges_filtered = cv2.resize(cv2.cvtColor(sobel_edges_filtered, cv2.COLOR_GRAY2BGR), (width, height))
+
+    # Crear un lienzo para mostrar todas las imágenes juntas
+    total_image = np.zeros((height * 2, width * 3, 3), dtype=np.uint8)
+
+    # Asignar cada imagen a la posición correspondiente
+    total_image[:height, :width] = frame  # Imagen original
+    total_image[:height, width:2*width] = canny_edges_original
+    total_image[:height, 2*width:] = canny_edges_filtered
+    total_image[height:, :width] = gaussian_filtered
+    total_image[height:, width:2*width] = sobel_edges_original
+    total_image[height:, 2*width:] = sobel_edges_filtered
+
+    # Añadir texto a cada imagen
+    cv2.putText(total_image, "Original", (10,  height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(total_image, "Canny (sin filtro)", (width + 10,  height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(total_image, "Canny (con filtro)", (2 * width + 10,  height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(total_image, "Suavizado Gaussiano", (10, height +  height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(total_image, "Sobel (sin filtro)", (width + 10, 2 * height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(total_image, "Sobel (con filtro)", (2 * width + 10, 2 * height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+    return total_image
+
+def edge_detection():
+    cap4 = cv2.VideoCapture(_URL)
+    frame_count = 0
+    MAX_FRAMES = 10000
+
+    while frame_count < MAX_FRAMES:
+        ret4, frame4 = cap4.read()
+        if not ret4:
+            break
+
+        # Aplicar la detección de bordes y comparación
+        processed_frame = filtro_deteccion_borde(frame4)
+        
+        # Mostrar el resultado
+        (flag, encodedImage) = cv2.imencode(".jpg", processed_frame)
+        if not flag:
+            continue
+
+        # Generar cada fotograma como una respuesta para transmitir en Flask
+        yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+               bytearray(encodedImage) + b'\r\n')
+
+        frame_count += 1
+
+    cap4.release()
+
+# Llama a la función border_detection para iniciar el procesamiento
     
 @app.route("/")
 def index():
@@ -165,6 +337,23 @@ def video_stream():
 def fps_movedeteccion():
     return Response(fps_deteccion(),
                     mimetype="multipart/x-mixed-replace; boundary=frame")
+    
+@app.route("/filtros_avanzados")
+def filtros_avanzados():
+    return Response(add_filters_avance(),
+                    mimetype="multipart/x-mixed-replace; boundary=frame")
+
+@app.route("/deteccion_borde")
+def deteccion_borde():
+    return Response(edge_detection(),
+                    mimetype="multipart/x-mixed-replace; boundary=frame")    
+@app.route('/division2')
+def division2():
+    return render_template("division2.html")
+
+@app.route('/division3')
+def division3():
+    return render_template("division3.html")
 
 if __name__ == "__main__":
     app.run(debug=False)

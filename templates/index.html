@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videostreaming ESP32-CAM</title>
+    <style>
+        /* Estilos generales */
+        /* Estilos generales */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Menú lateral */
+        .sidebar {
+            width: 150px;
+            background-color: #333;
+            color: white;
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            /* Organiza los elementos en columnas */
+            justify-content: flex-start;
+            /* Alinea los botones en la parte superior */
+            gap: 10px;
+            /* Añade espacio entre los botones */
+            height: 100vh;
+            /* Asegura que la sidebar ocupe toda la altura de la pantalla */
+            position: fixed;
+            /* Fija la barra lateral en el lado izquierdo */
+        }
+
+        /* Estilos para los botones */
+        .sidebar .boton {
+            display: block;
+            /* Cada botón ocupa una línea */
+            width: 100%;
+            /* Los botones ocupan todo el ancho disponible */
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: #fff;
+            border: solid;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            /* Incluye el padding en el tamaño total del botón */
+        }
+
+        .sidebar .boton:hover {
+            background-color: #555;
+        }
+
+        /* Estilos para la información del autor */
+        .sidebar .author {
+            margin-top: auto;
+            /* Empuja esta sección hacia el fondo */
+            font-size: 14px;
+            padding: 10px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* Contenido principal */
+        .main-content {
+            margin-left: 150px;
+            /* Deja espacio para la sidebar */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .containerHeader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-content h1 {
+            font-size: 36px;
+            color: #333;
+        }
+
+        #resultados {
+            max-width: 70%;
+            max-height: 70%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Menú lateral -->
+    <div class="sidebar">
+        <div>
+            <a href="https://github.com/Paute26/ESP32-Flask-Server" class="boton" target="_blank">GitHub</a>
+            <a href="http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg" class="boton" target="_blank">En-Vivo</a>
+        </div>
+        <div class="author">
+            <p>by:</p>
+            <p>Edwin Paute </p>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="main-content">
+        <h1>Bienvenido</h1>
+
+        <div class="containerHeader">
+            <h1>Video Streaming</h1>
+            <img src="{{ url_for('static', filename='Header.webp') }}" alt="Image header" width="50%">
+        </div>
+
+        <h2>ORIGINAL / Escala de Grises / Ruido y Efecto SalyPimienta</h2>
+        <img id="resultados" src="{{ url_for('video_stream') }}">
+        <h2>Ecualización de histograma/CLAHE/gamma correction </h2>
+        <h2> --- </h2>
+
+        <h2>FPS visualizados y Deteccion de Movimiento + Imagen de Fondo Calculada</h2>
+        <img id="resultados" src="{{ url_for('fps_movedeteccion') }}">
+        <h2> --- </h2>
+
+    </div>
+
+</body>
+
+</html>
